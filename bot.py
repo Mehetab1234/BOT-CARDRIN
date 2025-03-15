@@ -12,7 +12,7 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 AUTH_LINK = "https://discord.com/oauth2/authorize?client_id=1350449110968176690&permissions=8&scope=bot%20applications.commands"
 
-# Bot setup with all intents
+# Bot setup with prefix and intents
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -37,16 +37,18 @@ def run_flask():
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
-
+    
+    # Sync slash commands
     try:
-        synced = await bot.tree.sync()  # Sync slash commands
-        print(f"✅ Synced {len(synced)} commands!")
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} slash commands!")
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
 
     threading.Thread(target=run_flask, daemon=True).start()  # Start web server
     await load_cogs()  # Load all cogs
 
+# Load commands from cogs
 async def load_cogs():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
