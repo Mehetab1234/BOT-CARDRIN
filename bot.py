@@ -1,38 +1,47 @@
 import discord
 from discord.ext import commands
 import os
+from flask import Flask
+from threading import Thread
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
 
-# Bot setup with intents
+# Set up bot intents
 intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="/", intents=intents)
+intents.messages = True
+intents.guilds = True
+intents.message_content = True  # Required for message commands
 
-# Auto-load cogs
+# Initialize bot with slash command tree
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Flask App for Render Port Fix
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 5000))  # Render requires a web port
+    app.run(host="0.0.0.0", port=port)
+
+# Load all Cogs (Commands from files)
 async def load_cogs():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             await bot.load_extension(f"cogs.{filename[:-3]}")
 
-# Event: Bot is ready
 @bot.event
 async def on_ready():
-    await load_cogs()
-    print(f"✅ Bot is online as {bot.user}")
+    print(f"✅ Logged in as {bot.user} ({bot.user.id})")
+    await load_cogs()  # Load commands
+    print("✅ All cogs loaded!")
 
-# Error handling for commands
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("🚫 You don't have permission to use this command!", delete_after=5)
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("⚠️ Missing required argument!", delete_after=5)
-    else:
-        await ctx.send(f"❌ An error occurred: {error}")
+# Run Flask in a separate thread
+Thread(target=run_web).start()
 
-# Run bot
-bot.run(TOKEN)
+# Run bot with token
+bot.run(os.getenv("DISCORD_TOKEN"))
