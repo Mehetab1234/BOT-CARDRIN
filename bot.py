@@ -1,53 +1,50 @@
+import os
 import discord
 from discord.ext import commands
-import os
+from dotenv import load_dotenv
 from flask import Flask, jsonify
+import threading
+import asyncio
 
+# Load environment variables
+load_dotenv()
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+# Initialize bot
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
-bot.remove_command("help")
 
-# Load Cogs
-cogs = [
-    "cogs.general",
-    "cogs.moderation",
-    "cogs.utility",
-    "cogs.ticket",
-    "cogs.info"
-]
-
-for cog in cogs:
-    bot.load_extension(cog)
-
-# Flask Web Panel
+# Flask Web App
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return jsonify({"status": "Bot is running", "bot_name": bot.user.name})
+    if bot.user:
+        return jsonify({"status": "Bot is running", "bot_name": bot.user.name})
+    else:
+        return jsonify({"status": "Bot is starting..."}), 503
 
-@app.route("/send/<channel_id>/<message>")
-def send_message(channel_id, message):
-    channel = bot.get_channel(int(channel_id))
-    if channel:
-        bot.loop.create_task(channel.send(message))
-        return jsonify({"status": "Message sent"})
-    return jsonify({"error": "Invalid Channel ID"})
+# Run Flask in a separate thread
+def run_flask():
+    app.run(host="0.0.0.0", port=5000)
 
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
-    await bot.change_presence(activity=discord.Game("Managing Craze Panel!"))
-    try:
-        synced = await bot.tree.sync()
-        print(f"📌 Synced {len(synced)} slash commands!")
-    except Exception as e:
-        print(f"❌ Sync Error: {e}")
+    
+    # Start Flask after bot is ready
+    threading.Thread(target=run_flask, daemon=True).start()
 
-def run_flask():
-    app.run(host="0.0.0.0", port=5000)
+    # Load all cogs
+    await load_cogs()
 
-if __name__ == "__main__":
-    import threading
-    threading.Thread(target=run_flask).start()
-    bot.run("YOUR_BOT_TOKEN")
+async def load_cogs():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")
+
+async def main():
+    async with bot:
+        await bot.start(TOKEN)
+
+asyncio.run(main())
