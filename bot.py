@@ -10,9 +10,9 @@ import asyncio
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-AUTH_LINK = "https://discord.com/oauth2/authorize?client_id=1350449110968176690"
+AUTH_LINK = "https://discord.com/oauth2/authorize?client_id=1350449110968176690&permissions=8&scope=bot%20applications.commands"
 
-# Bot setup
+# Bot setup with all intents
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -37,7 +37,6 @@ def run_flask():
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
-    threading.Thread(target=run_flask, daemon=True).start()
 
     try:
         synced = await bot.tree.sync()  # Sync slash commands
@@ -45,7 +44,8 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
 
-    await load_cogs()
+    threading.Thread(target=run_flask, daemon=True).start()  # Start web server
+    await load_cogs()  # Load all cogs
 
 async def load_cogs():
     for filename in os.listdir("./cogs"):
