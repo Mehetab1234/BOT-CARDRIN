@@ -6,45 +6,31 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # 🧹 Clear Messages Command
-    @app_commands.command(name="clear", description="Clear a number of messages in this channel.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def clear(self, interaction: discord.Interaction, amount: int):
-        await interaction.channel.purge(limit=amount)
-        await interaction.response.send_message(f"✅ Cleared {amount} messages!", ephemeral=True)
+    # Clear messages (!clear)
+    @commands.command(name="clear")
+    async def clear(self, ctx, amount: int):
+        """Deletes messages"""
+        await ctx.channel.purge(limit=amount + 1)
+        await ctx.send(f"🗑 Deleted {amount} messages!", delete_after=3)
 
-    # 🔒 Lock Channel Command
-    @app_commands.command(name="lock", description="Lock the current channel.")
-    @app_commands.checks.has_permissions(manage_channels=True)
-    async def lock(self, interaction: discord.Interaction):
-        overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
-        overwrite.send_messages = False
-        await interaction.channel.set_permissions(interaction.guild.default_role, overwrite=overwrite)
-        await interaction.response.send_message("🔒 This channel has been locked!", ephemeral=True)
+    # Slash command /clear
+    @app_commands.command(name="clear", description="Deletes messages")
+    async def clear_slash(self, interaction: discord.Interaction, amount: int):
+        """Deletes messages (slash command)"""
+        await interaction.channel.purge(limit=amount + 1)
+        await interaction.response.send_message(f"🗑 Deleted {amount} messages!", ephemeral=True)
 
-    # 🔓 Unlock Channel Command
-    @app_commands.command(name="unlock", description="Unlock the current channel.")
-    @app_commands.checks.has_permissions(manage_channels=True)
-    async def unlock(self, interaction: discord.Interaction):
-        overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
-        overwrite.send_messages = True
-        await interaction.channel.set_permissions(interaction.guild.default_role, overwrite=overwrite)
-        await interaction.response.send_message("🔓 This channel has been unlocked!", ephemeral=True)
+    # Warn command (!warn)
+    @commands.command(name="warn")
+    async def warn(self, ctx, member: discord.Member, *, reason: str):
+        """Warns a user"""
+        await ctx.send(f"⚠️ {member.mention} has been warned for: {reason}")
 
-    # ⚠️ Warn User Command
-    @app_commands.command(name="warn", description="Warn a user for bad behavior.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
-        await member.send(f"⚠️ You have been warned for: {reason}")
-        await interaction.response.send_message(f"✅ Warned {member.mention} for: {reason}", ephemeral=True)
-
-    # 📜 View Warnings Command
-    warnings = {}
-
-    @app_commands.command(name="warnings", description="Check a user's warnings.")
-    async def warnings(self, interaction: discord.Interaction, member: discord.Member):
-        count = self.warnings.get(member.id, 0)
-        await interaction.response.send_message(f"⚠️ {member.mention} has {count} warnings.", ephemeral=True)
+    # Slash warn command (/warn)
+    @app_commands.command(name="warn", description="Warn a user")
+    async def warn_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+        """Warns a user (slash command)"""
+        await interaction.response.send_message(f"⚠️ {member.mention} has been warned for: {reason}")
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
